@@ -4,6 +4,7 @@ import Data.Maybe
 import Data.List
 import Control.Monad
 import Data.String.Utils
+import Criterion.Main
 
 data SpotFill = Unknown | No | Yes deriving Show
 type Board = [[SpotFill]]
@@ -65,7 +66,7 @@ prettyPrintBoard = _prettyPrintBoard 5
 
 _prettyPrintBoard :: Int -> Board -> String
 _prettyPrintBoard _ [] = ""
-_prettyPrintBoard 0 l@(h:t) = (replicate (length s) '-') <> "\n" <> s <> "\n" <> _prettyPrintBoard 5 t where s = _prettyPrintBoardRow 5 h
+_prettyPrintBoard 0 l@(h:t) = (replicate (length s) '-') <> "\n" <> s <> "\n" <> _prettyPrintBoard 4 t where s = _prettyPrintBoardRow 5 h
 _prettyPrintBoard n (h:t) = _prettyPrintBoardRow 5 h <> "\n" <> _prettyPrintBoard (n-1) t
 
 _prettyPrintBoardRow :: Int -> [SpotFill] -> String
@@ -93,3 +94,4 @@ main = do
   putStrLn "enter col constraints:"
   colConstrs <- replicateM m inputConstrs
   putStrLn $ maybe "cannot solve" (("your solved board:\n" <>) . prettyPrintBoard) $ solveBoardOfSize n m rowConstrs colConstrs
+  defaultMain [ bgroup "solve" [ bench "solve" $ whnf (\(a,b,c,d) -> solveBoardOfSize a b c d) (n,m,rowConstrs,colConstrs) ] ]
