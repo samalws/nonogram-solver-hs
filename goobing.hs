@@ -5,6 +5,8 @@ import Data.List
 import Control.Monad
 import Data.String.Utils
 import Criterion.Main
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader
 
 data SpotFill = Unknown | No | Yes deriving Show
 type Board = [[SpotFill]]
@@ -47,13 +49,16 @@ emptySpotRow [] = Nothing
 emptySpotRow (Unknown:_) = pure 0
 emptySpotRow (_:r) = (+ 1) <$> emptySpotRow r
 
-solveBoard :: Board -> Constrs -> Constrs -> Maybe Board
-solveBoard board rowConstrs colConstrs = maybe (pure board) trySolve $ emptySpot board where
-  trySolve :: (Int, Int) -> Maybe Board
-  trySolve i = maybe (trySolveV Yes i) pure $ trySolveV No i
+solveBoardM :: Constrs -> Constrs -> ReaderT Board [] Board
+solveBoardM cr cc = maybe ask f =<< asks emptySpot where
+  f loc = do
+    soln <- lift [Yes,No]
+    newBoard <- asks $ fillSpot soln loc
+    if boardBad newBoard cr cc then lift [] else pure ()
+    local (const newBoard) (solveBoardM cr cc)
 
-  trySolveV :: SpotFill -> (Int, Int) -> Maybe Board
-  trySolveV v i = if (not $ boardBad spotFilled rowConstrs colConstrs) then (solveBoard spotFilled rowConstrs colConstrs) else Nothing where spotFilled = fillSpot v i board
+solveBoard' :: Board -> Constrs -> Constrs -> Maybe Board
+solveBoard' board cr cc = listToMaybe $ flip runReaderT board $ solveBoardM cr cc
 
 boardOfSize :: Int -> Int -> Board
 boardOfSize n m = replicate n $ replicate n Unknown
